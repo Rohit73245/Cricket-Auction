@@ -179,21 +179,23 @@ model Bid {
   @@index([auctionPlayerId, createdAt])
 }
 
+
 model PlayerSeasonStats {
-  id          String                @id @default(uuid()) @db.Uuid
-  playerId    String                @db.Uuid
-  season      String
-  sourceType  PlayerStatsSourceType
-  asOfDate    DateTime?
-  statistics  Json
-  sourceName  String?
-  sourceUrl   String?
-  verified    Boolean               @default(false)
+  id               String                @id @default(uuid()) @db.Uuid
+  playerId         String                @db.Uuid
+  season           String
+  sourceType       PlayerStatsSourceType
+  asOfDate         DateTime?
+  statistics       Json
+  sourceName       String?
+  sourceUrl        String?
+  verified         Boolean               @default(false)
+  iplCareerExists  Boolean?
 
-  player      Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player           Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime              @default(now())
-  updatedAt   DateTime              @updatedAt
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   @@unique([playerId, season, sourceType])
   @@index([season, sourceType])

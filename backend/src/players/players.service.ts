@@ -11,7 +11,6 @@ import { PrismaService } from '../prisma.service.js';
 export class PlayersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Create a new player
   async create(data: {
     name: string;
     role: 'BATTER' | 'BOWLER' | 'ALL_ROUNDER' | 'WICKET_KEEPER';
@@ -32,14 +31,12 @@ export class PlayersService {
     });
   }
 
-  // Get all players
   async findAll() {
     return this.prisma.player.findMany({
       orderBy: { name: 'asc' },
     });
   }
 
-  // Get one player
   async findOne(id: string) {
     const player = await this.prisma.player.findUnique({
       where: { id },
@@ -52,7 +49,6 @@ export class PlayersService {
     return player;
   }
 
-  // Save statistics for a particular player and season
   async saveSeasonStats(data: {
     playerId: string;
     season: string;
@@ -62,6 +58,7 @@ export class PlayersService {
     sourceName?: string;
     sourceUrl?: string;
     verified?: boolean;
+    iplCareerExists?: boolean;
   }) {
     const player = await this.prisma.player.findUnique({
       where: { id: data.playerId },
@@ -82,6 +79,15 @@ export class PlayersService {
       throw new BadRequestException('Invalid asOfDate');
     }
 
+    if (
+      data.sourceType === 'DOMESTIC_T20' &&
+      data.iplCareerExists === true
+    ) {
+      throw new BadRequestException(
+        'Domestic T20 fallback is only for players with no IPL career',
+      );
+    }
+
     return this.prisma.playerSeasonStats.upsert({
       where: {
         playerId_season_sourceType: {
@@ -90,6 +96,7 @@ export class PlayersService {
           sourceType: data.sourceType,
         },
       },
+
       update: {
         asOfDate: data.asOfDate
           ? new Date(data.asOfDate)
@@ -98,7 +105,12 @@ export class PlayersService {
         sourceName: data.sourceName,
         sourceUrl: data.sourceUrl,
         verified: data.verified ?? false,
+        iplCareerExists:
+          data.sourceType === 'IPL'
+            ? data.iplCareerExists ?? null
+            : null,
       },
+
       create: {
         playerId: data.playerId,
         season: data.season,
@@ -110,11 +122,14 @@ export class PlayersService {
         sourceName: data.sourceName,
         sourceUrl: data.sourceUrl,
         verified: data.verified ?? false,
+        iplCareerExists:
+          data.sourceType === 'IPL'
+            ? data.iplCareerExists ?? null
+            : null,
       },
     });
   }
 
-  // Get statistics for a particular season
   async getSeasonStats(playerId: string, season: string) {
     const player = await this.prisma.player.findUnique({
       where: { id: playerId },
@@ -124,22 +139,50 @@ export class PlayersService {
       throw new NotFoundException('Player not found');
     }
 
-    const stats = await this.prisma.playerSeasonStats.findMany({
+    const records = await this.prisma.playerSeasonStats.findMany({
       where: {
         playerId,
         season,
       },
     });
 
-    const iplStats = stats.find(
-      (item) => item.sourceType === 'IPL',
+    const iplStats = records.find(
+      (record) => record.sourceType === 'IPL',
     );
 
-    const domesticStats = stats.find(
-      (item) => item.sourceType === 'DOMESTIC_T20',
+    const domesticStats = records.find(
+      (record) => record.sourceType === 'DOMESTIC_T20',
     );
 
-    const selectedStats = iplStats || domesticStats;
+    let selectedStats = null;
+    let displayStatus = 'N/A';
+
+    // Priority 1: Player has no IPL career.
+    // Use domestic T20 statistics instead.
+    if (iplStats?.iplCareerExists === false) {
+      if (domesticStats?.verified) {
+        selectedStats = domesticStats;
+        displayStatus = 'DOMESTIC_T20';
+      } else if (domesticStats) {
+        selectedStats = domesticStats;
+        displayStatus = 'UNVERIFIED';
+      }
+    }
+
+    // Priority 2: Player has an IPL career.
+    // Use IPL statistics only.
+    else if (iplStats?.iplCareerExists === true) {
+      if (iplStats.verified) {
+        selectedStats = iplStats;
+        displayStatus = 'AVAILABLE';
+      } else {
+        selectedStats = iplStats;
+        displayStatus = 'UNVERIFIED';
+      }
+    }
+
+    // Priority 3: IPL career information is missing.
+    // Do not assume domestic fallback is allowed.
 
     return {
       playerId,
@@ -151,7 +194,7 @@ export class PlayersService {
       sourceName: selectedStats?.sourceName ?? null,
       sourceUrl: selectedStats?.sourceUrl ?? null,
       verified: selectedStats?.verified ?? false,
-      displayStatus: selectedStats ? 'AVAILABLE' : 'N/A',
+      displayStatus,
     };
   }
 }
