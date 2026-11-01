@@ -1,0 +1,167 @@
+
+<div class="page">
+  <header class="topbar">
+    <a class="brand" routerLink="/">
+      <span class="brand-icon">🏏</span>
+      <span>CRICKET<span class="brand-light"> AUCTION</span></span>
+    </a>
+    <span class="top-label">YOUR LEAGUE. YOUR AUCTION.</span>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <span class="eyebrow">THE AUCTION ROOM STARTS HERE</span>
+      <h1>Build your <span>dream auction.</span></h1>
+      <p>Create a private auction for your friends or open it to your cricket community.</p>
+    </section>
+
+    <section class="content-grid">
+      <div class="form-card">
+        <div class="section-heading">
+          <span class="step">01</span>
+          <div>
+            <h2>Create an auction</h2>
+            <p>Choose your competition before creating your draft.</p>
+          </div>
+        </div>
+
+        <form (ngSubmit)="createAuction()">
+          <label for="auctionName">Auction name</label>
+          <input
+            id="auctionName"
+            name="auctionName"
+            type="text"
+            placeholder="e.g. Weekend Premier League"
+            maxlength="100"
+            [(ngModel)]="name"
+            required
+          />
+
+          <label for="auctionMode">Auction mode</label>
+          <select id="auctionMode" name="auctionMode" [(ngModel)]="mode">
+            <option value="EXISTING_LEAGUE">Select Existing League</option>
+            <option value="CUSTOM" disabled>Fully Customised Auction — Coming Soon</option>
+          </select>
+
+          @if (mode === 'EXISTING_LEAGUE') {
+            <div class="league-selection">
+              <p class="eyebrow">LEAGUE CONFIGURATION</p>
+
+              <label for="league">Select league</label>
+              <select
+                id="league"
+                name="league"
+                [ngModel]="selectedLeagueId()"
+                (ngModelChange)="changeLeague($event)"
+              >
+                @for (league of leagues; track league.id) {
+                  <option [value]="league.id">
+                    {{ league.name }}
+                  </option>
+                }
+              </select>
+
+              <label for="season">Select season / year</label>
+              <select
+                id="season"
+                name="season"
+                [ngModel]="selectedSeason()"
+                (ngModelChange)="selectedSeason.set($event)"
+              >
+                @for (year of seasons(); track year) {
+                  <option [value]="year">{{ year }}</option>
+                }
+              </select>
+
+              @if (seasons().length === 0) {
+                <p class="error-message">
+                  No season data is available for this league yet.
+                </p>
+              }
+
+              <p class="hint">
+                Participating teams will be selected after the draft is created.
+              </p>
+            </div>
+          }
+
+          <label for="visibility">Who can join?</label>
+          <select id="visibility" name="visibility" [(ngModel)]="visibility">
+            <option value="PRIVATE">Private — invite only</option>
+            <option value="PUBLIC">Public — open to everyone</option>
+          </select>
+
+          <button type="submit" [disabled]="saving()">
+            {{ saving() ? 'Creating draft…' : 'Create Draft →' }}
+          </button>
+        </form>
+
+        @if (message()) {
+          <p class="success-message" role="status">{{ message() }}</p>
+        }
+
+        @if (error()) {
+          <p class="error-message" role="alert">{{ error() }}</p>
+        }
+      </div>
+
+      <aside class="info-card">
+        <span class="info-icon">🏆</span>
+        <span class="eyebrow">YOUR TOURNAMENT</span>
+        <h2>Every great league starts with an auction.</h2>
+        <p>Bring your friends together, build your teams and make every bid count.</p>
+
+        <div class="feature"><span>01</span> Choose your auction format</div>
+        <div class="feature"><span>02</span> Select participating teams</div>
+        <div class="feature"><span>03</span> Start bidding together</div>
+      </aside>
+    </section>
+
+    <section class="auctions-section">
+      <div class="list-heading">
+        <div>
+          <span class="eyebrow">YOUR WORKSPACE</span>
+          <h2>Your auctions</h2>
+        </div>
+        <span class="count">{{ auctions().length }} total</span>
+      </div>
+
+      @if (loading()) {
+        <p class="empty-state">Loading your auctions…</p>
+      } @else if (auctions().length === 0) {
+        <p class="empty-state">No auctions yet. Create your first one above.</p>
+      } @else {
+        <div class="auction-list">
+          @for (auction of auctions(); track auction.id) {
+            <article
+              class="auction-row"
+              [routerLink]="['/auctions', auction.id]"
+              role="link"
+              tabindex="0"
+            >
+              <div class="auction-avatar">🏏</div>
+
+              <div class="auction-details">
+                <h3>{{ auction.name }}</h3>
+                <p>
+                  {{ auction.mode === 'CUSTOM' ? 'Custom auction' : 'Existing league' }}
+                  @if (auction.leagueId) {
+                    · {{ auction.leagueId }}
+                  }
+                  @if (auction.season) {
+                    · {{ auction.season }}
+                  }
+                  · {{ auction.visibility === 'PRIVATE' ? 'Private' : 'Public' }}
+                </p>
+              </div>
+
+              <span class="status">{{ auction.status }}</span>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  </main>
+
+  <footer>Made for cricket fans. Built for unforgettable auctions.</footer>
+</div>

@@ -1,0 +1,81 @@
+
+<main class="details-page">
+  <a class="back-link" routerLink="/">← Back to your auctions</a>
+
+  @if (loading()) {
+    <section class="details-card">
+      <p>Loading auction details...</p>
+    </section>
+  } @else if (error()) {
+    <section class="details-card">
+      <h1>Unable to open auction</h1>
+      <p class="error">{{ error() }}</p>
+      <a class="back-button" routerLink="/">Return home</a>
+    </section>
+  } @else if (auction(); as item) {
+    <section class="details-card">
+      <span class="eyebrow">AUCTION WORKSPACE</span>
+
+      <div class="title-row">
+        <div>
+          <h1>{{ item.name }}</h1>
+          <p class="subtitle">Your cricket auction starts here.</p>
+        </div>
+
+        <span class="status">{{ item.status }}</span>
+      </div>
+
+      <div class="details-grid">
+        <article class="detail-item">
+          <span>Auction mode</span>
+          <strong>
+            {{ item.mode === 'CUSTOM' ? 'Fully Customised Auction' : 'Select Existing League' }}
+          </strong>
+        </article>
+
+        <article class="detail-item">
+          <span>Visibility</span>
+          <strong>
+            {{ item.visibility === 'PRIVATE' ? 'Private — invite only' : 'Public — open to everyone' }}
+          </strong>
+        </article>
+
+        <article class="detail-item">
+          <span>Created on</span>
+          <strong>{{ item.createdAt | date:'medium' }}</strong>
+        </article>
+
+        <article class="detail-item">
+          <span>Auction ID</span>
+          <strong class="auction-id">{{ item.id }}</strong>
+        </article>
+      </div>
+
+      <div class="next-step">
+  <h2>Next: Set up your auction</h2>
+
+  @if (item.mode === 'EXISTING_LEAGUE') {
+    <p>
+      Select your league, season and participating teams before proceeding
+      to team setup.
+    </p>
+
+    <a
+      class="setup-button"
+      [routerLink]="['/auctions', item.id, 'league']"
+    >
+      Select Participating Teams →
+    </a>
+  } @else {
+    <p>
+      Configure your custom auction teams, budgets and player pool.
+    </p>
+
+    <button type="button" disabled>
+      Custom setup — coming next
+    </button>
+  }
+</div>
+    </section>
+  }
+</main>

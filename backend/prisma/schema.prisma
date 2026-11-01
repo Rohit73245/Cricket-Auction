@@ -1,0 +1,200 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AuctionMode {
+  EXISTING_LEAGUE
+  CUSTOM
+}
+
+enum AuctionStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum AuctionVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum PlayerRole {
+  BATTER
+  BOWLER
+  ALL_ROUNDER
+  WICKET_KEEPER
+}
+
+enum PlayerAuctionStatus {
+  QUEUED
+  LIVE
+  SOLD
+  UNSOLD
+}
+
+enum BidStatus {
+  VALID
+  INVALID
+}
+
+enum PlayerStatsSourceType {
+  IPL
+  DOMESTIC_T20
+}
+
+model Auction {
+  id              String            @id @default(uuid()) @db.Uuid
+  name            String
+  mode            AuctionMode
+  status          AuctionStatus     @default(DRAFT)
+  visibility      AuctionVisibility @default(PRIVATE)
+
+  leagueId        String?
+  season          String?
+  selectedTeams   Json?
+
+  leagueRulesId   String?            @db.Uuid
+  leagueRules     LeagueRules?       @relation(fields: [leagueRulesId], references: [id])
+
+  auctionTeams    AuctionTeam[]
+  auctionPlayers  AuctionPlayer[]
+  bids            Bid[]
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([status, createdAt])
+  @@index([leagueRulesId])
+}
+
+model LeagueRules {
+  id                     String   @id @default(uuid()) @db.Uuid
+  leagueId               String   @unique
+
+  rulesSourceSeason      String
+  currency               String   @default("INR")
+  teamPurse              Decimal  @db.Decimal(12, 2)
+
+  minimumSquadSize       Int
+  maximumSquadSize       Int?
+  maximumOverseasPlayers Int?
+  maximumOverseasInXI    Int?
+
+  minimumLocalPlayers    Int?
+  minimumUnder22Players  Int?
+
+  rulesSource            String?
+  verified               Boolean  @default(false)
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  auctions               Auction[]
+}
+
+model Player {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String
+  role        PlayerRole
+  nationality String
+  photoUrl    String?
+  basePrice   Decimal    @db.Decimal(12, 2)
+  statistics  Json?
+
+  auctionPlayers AuctionPlayer[]
+  seasonStats    PlayerSeasonStats[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([name])
+  @@index([role])
+}
+
+model AuctionTeam {
+  id             String   @id @default(uuid()) @db.Uuid
+  auctionId      String   @db.Uuid
+  teamCode       String
+  teamName       String
+  totalPurse     Decimal  @db.Decimal(12, 2)
+  remainingPurse Decimal  @db.Decimal(12, 2)
+
+  auction        Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  players        AuctionPlayer[]
+  bids           Bid[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([auctionId, teamCode])
+  @@index([auctionId])
+}
+
+model AuctionPlayer {
+  id          String              @id @default(uuid()) @db.Uuid
+  auctionId   String              @db.Uuid
+  playerId    String              @db.Uuid
+  teamId      String?             @db.Uuid
+  status      PlayerAuctionStatus @default(QUEUED)
+  queueOrder  Int
+  basePrice   Decimal?            @db.Decimal(12, 2)
+  soldPrice   Decimal?            @db.Decimal(12, 2)
+
+  auction     Auction             @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  player      Player              @relation(fields: [playerId], references: [id])
+  team        AuctionTeam?        @relation(fields: [teamId], references: [id])
+  bids        Bid[]
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([auctionId, playerId])
+  @@unique([auctionId, queueOrder])
+  @@index([auctionId, status])
+}
+
+model Bid {
+  id              String        @id @default(uuid()) @db.Uuid
+  auctionId       String        @db.Uuid
+  auctionPlayerId String        @db.Uuid
+  teamId          String        @db.Uuid
+  amount          Decimal       @db.Decimal(12, 2)
+  status          BidStatus     @default(VALID)
+
+  auction         Auction       @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auctionPlayer   AuctionPlayer @relation(fields: [auctionPlayerId], references: [id], onDelete: Cascade)
+  team            AuctionTeam   @relation(fields: [teamId], references: [id])
+
+  createdAt       DateTime      @default(now())
+
+  @@index([auctionId, createdAt])
+  @@index([auctionPlayerId, createdAt])
+}
+
+model PlayerSeasonStats {
+  id          String                @id @default(uuid()) @db.Uuid
+  playerId    String                @db.Uuid
+  season      String
+  sourceType  PlayerStatsSourceType
+  asOfDate    DateTime?
+  statistics  Json
+  sourceName  String?
+  sourceUrl   String?
+  verified    Boolean               @default(false)
+
+  player      Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@unique([playerId, season, sourceType])
+  @@index([season, sourceType])
+}

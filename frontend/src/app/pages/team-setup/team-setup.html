@@ -1,0 +1,170 @@
+
+<div class="setup-page">
+  <header class="setup-header">
+    <a routerLink="/" class="brand">🏏 CRICKET AUCTION</a>
+    <span>TEAM SETUP</span>
+  </header>
+
+  <main class="setup-container">
+    <a routerLink="/" class="back-link">← Back to home</a>
+
+    <section class="intro">
+      <p class="eyebrow">STEP 03 · TEAM CONFIGURATION</p>
+      <h1>Set up your <span>teams.</span></h1>
+      <p>Review the league, selected teams and official auction rules.</p>
+    </section>
+
+    @if (loading()) {
+      <p class="message">Loading auction details...</p>
+    }
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    @if (success()) {
+      <p class="success-message">✓ {{ success() }}</p>
+    }
+
+    @if (auction(); as data) {
+      <section class="details-card">
+        <p class="eyebrow">SELECTED COMPETITION</p>
+        <h2>{{ data.leagueId }}</h2>
+        <p>Selected season: <strong>{{ data.season }}</strong></p>
+
+        <div class="divider"></div>
+
+        <div class="teams-heading">
+          <h2>Participating teams</h2>
+          <span>{{ data.selectedTeams?.length ?? 0 }} teams</span>
+        </div>
+
+        <div class="team-list">
+          @for (team of data.selectedTeams ?? []; track team) {
+            <div class="team-item">
+              <span class="team-check">✓</span>
+              <strong>{{ team }}</strong>
+            </div>
+          }
+        </div>
+
+        @if (!data.selectedTeams?.length) {
+          <p class="message">No teams have been saved yet.</p>
+        }
+      </section>
+
+      @if (data.mode === 'EXISTING_LEAGUE') {
+        <section class="rules-card">
+          <div class="rules-heading">
+            <div>
+              <p class="eyebrow">OFFICIAL LEAGUE CONFIGURATION</p>
+              <h2>Auction rules</h2>
+            </div>
+
+            @if (data.leagueRules?.verified) {
+              <span class="verified-badge">✓ Verified</span>
+            } @else {
+              <span class="pending-badge">Rules pending</span>
+            }
+          </div>
+
+          @if (data.leagueRules?.verified) {
+            @if (data.leagueRules; as rules) {
+              <p class="rules-source">
+                Rules based on {{ rules.leagueId }}
+                {{ rules.rulesSourceSeason }} regulations.
+              </p>
+
+              <div class="rules-grid">
+                <div class="rule-item">
+                  <span>Team auction purse</span>
+                  <strong>₹{{ formatPurse(rules.teamPurse) }} Crore</strong>
+                </div>
+
+                <div class="rule-item">
+                  <span>Minimum squad size</span>
+                  <strong>{{ rules.minimumSquadSize }} players</strong>
+                </div>
+
+                <div class="rule-item">
+                  <span>Maximum squad size</span>
+                  <strong>{{ rules.maximumSquadSize ?? 'Not specified' }}</strong>
+                </div>
+
+                <div class="rule-item">
+                  <span>Maximum overseas players</span>
+                  <strong>{{ rules.maximumOverseasPlayers ?? 'Not specified' }}</strong>
+                </div>
+
+                <div class="rule-item">
+                  <span>Overseas players in playing XI</span>
+                  <strong>{{ rules.maximumOverseasInXI ?? 'Not specified' }}</strong>
+                </div>
+              </div>
+
+              <p class="rules-note">
+                These rules are read-only for Existing League auctions.
+              </p>
+
+              <p class="rules-reference">
+                Source: {{ rules.rulesSource }}
+              </p>
+            }
+          } @else {
+            <div class="pending-rules">
+              <h3>Official rules are not available yet.</h3>
+              <p>
+                Verified rules for {{ data.leagueId }} have not been added
+                to our database yet.
+              </p>
+              <p>
+                Your auction draft and selected teams are saved. You can
+                return later after verified rules become available.
+              </p>
+              <strong>
+                Auction progression will remain locked until the rules are verified.
+              </strong>
+            </div>
+          }
+        </section>
+      }
+
+      <section class="start-auction-card">
+        <div>
+          <p class="eyebrow">READY TO BEGIN?</p>
+          <h2>Auction status</h2>
+          <p>
+            Current status:
+            <strong>{{ data.status }}</strong>
+          </p>
+        </div>
+
+        @if (data.status === 'DRAFT') {
+          <button
+            class="start-auction-button"
+            [disabled]="starting() ||
+              (data.mode === 'EXISTING_LEAGUE' && !data.leagueRules?.verified) ||
+              (data.selectedTeams?.length ?? 0) < 2"
+            (click)="startAuction()"
+          >
+            @if (starting()) {
+              Starting...
+            } @else {
+              Start Auction →
+            }
+          </button>
+        } @else if (data.status === 'ACTIVE') {
+          <span class="active-badge">✓ Auction Started</span>
+        } @else {
+          <span class="pending-badge">{{ data.status }}</span>
+        }
+
+        @if (data.mode === 'EXISTING_LEAGUE' && !data.leagueRules?.verified) {
+          <p class="message">
+            Start is locked until verified official rules are attached.
+          </p>
+        }
+      </section>
+    }
+  </main>
+</div>

@@ -1,0 +1,147 @@
+
+<div class="league-page">
+
+  <header class="league-topbar">
+    <a routerLink="/" class="brand">🏏 CRICKET AUCTION</a>
+    <span>EXISTING LEAGUE</span>
+  </header>
+
+  <main class="league-container">
+
+    <a routerLink="/" class="back-link">← Back to home</a>
+
+    <section class="intro">
+      <p class="eyebrow">STEP 02 · TEAM CONFIGURATION</p>
+
+      <h1>
+        Select your <span>participating teams.</span>
+      </h1>
+
+      <p>
+        Your competition and season are fixed for this auction.
+        Choose which teams will participate.
+      </p>
+    </section>
+
+    @if (loading()) {
+      <section class="league-card">
+        <p>Loading auction details...</p>
+      </section>
+    } @else if (errorMessage() && !auction()) {
+      <section class="league-card">
+        <p class="warning">{{ errorMessage() }}</p>
+      </section>
+    } @else if (auction(); as data) {
+
+      <section class="league-card">
+
+        <div class="league-heading">
+          <div>
+            <p class="eyebrow">LOCKED COMPETITION</p>
+
+            <h2>{{ selectedLeague()?.name ?? data.leagueId }}</h2>
+
+            <p>{{ selectedLeague()?.description ?? 'Selected competition' }}</p>
+          </div>
+
+          <div class="ipl-mark">
+            {{ data.leagueId }}
+          </div>
+        </div>
+
+        <div class="locked-details">
+
+          <div class="locked-item">
+            <span>Selected league</span>
+            <strong>{{ data.leagueId }}</strong>
+            <span class="lock-label">🔒 Locked</span>
+          </div>
+
+          <div class="locked-item">
+            <span>Selected season</span>
+            <strong>{{ data.season }}</strong>
+            <span class="lock-label">🔒 Locked</span>
+          </div>
+
+        </div>
+
+        <p class="hint">
+          League and season cannot be changed after draft creation.
+        </p>
+
+      </section>
+
+      <section class="teams-section">
+
+        <div class="teams-heading">
+          <div>
+            <p class="eyebrow">PARTICIPATING TEAMS</p>
+            <h2>Select teams</h2>
+          </div>
+
+          <span class="team-count">
+            {{ selectedTeams().length }} selected
+          </span>
+        </div>
+
+        <div class="team-grid">
+
+          @for (team of teams(); track team.short) {
+            <button
+              type="button"
+              class="team-card"
+              [class.selected]="isSelected(team.short)"
+              [style.--team-color]="team.color"
+              [attr.aria-pressed]="isSelected(team.short)"
+              (click)="toggleTeam(team.short)"
+            >
+              <span class="team-check">
+                {{ isSelected(team.short) ? '✓' : '+' }}
+              </span>
+
+              <span class="team-badge">
+                {{ team.short }}
+              </span>
+
+              <span class="team-name">
+                {{ team.name }}
+              </span>
+            </button>
+          }
+
+        </div>
+
+        @if (teams().length === 0) {
+          <p class="warning">
+            No team data is available for this league and season.
+          </p>
+        }
+
+        @if (selectedTeams().length < 2) {
+          <p class="warning">
+            Select at least two teams to continue.
+          </p>
+        }
+
+        @if (errorMessage()) {
+          <p class="warning">{{ errorMessage() }}</p>
+        }
+
+        <button
+          class="continue-button"
+          type="button"
+          [disabled]="selectedTeams().length < 2 || saving() || teams().length === 0"
+          (click)="continueToTeamSetup()"
+        >
+          {{ saving() ? 'Saving...' : 'Continue to team setup →' }}
+        </button>
+
+        <p class="hint">
+          Your selected teams will be saved to this auction.
+        </p>
+
+      </section>
+    }
+
+  </main>
+</div>
