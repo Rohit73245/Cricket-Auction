@@ -200,3 +200,16 @@ model PlayerSeasonStats {
   @@unique([playerId, season, sourceType])
   @@index([season, sourceType])
 }
+
+model AuctionSeasonConfig {
+  id                    String   @id @default(uuid()) @db.Uuid
+  leagueId              String
+  season                String
+  iplStatsCutoffDate    DateTime
+  domesticStatsCutoffDate DateTime
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([leagueId, season])
+  @@index([season])
+}
