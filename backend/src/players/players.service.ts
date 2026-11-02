@@ -72,11 +72,18 @@ export class PlayersService {
       throw new BadRequestException('Season is required');
     }
 
-    if (
-      data.asOfDate &&
-      Number.isNaN(Date.parse(data.asOfDate))
-    ) {
-      throw new BadRequestException('Invalid asOfDate');
+    if (data.asOfDate) {
+      const parsedDate = new Date(`${data.asOfDate}T00:00:00.000Z`);
+
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(data.asOfDate) ||
+        Number.isNaN(parsedDate.getTime()) ||
+        parsedDate.toISOString().slice(0, 10) !== data.asOfDate
+      ) {
+        throw new BadRequestException(
+          'asOfDate must be a valid YYYY-MM-DD date',
+        );
+      }
     }
 
     if (
@@ -99,7 +106,7 @@ export class PlayersService {
 
       update: {
         asOfDate: data.asOfDate
-          ? new Date(data.asOfDate)
+          ? new Date(`${data.asOfDate}T00:00:00.000Z`)
           : null,
         statistics: data.statistics as any,
         sourceName: data.sourceName,
@@ -116,7 +123,7 @@ export class PlayersService {
         season: data.season,
         sourceType: data.sourceType,
         asOfDate: data.asOfDate
-          ? new Date(data.asOfDate)
+          ? new Date(`${data.asOfDate}T00:00:00.000Z`)
           : null,
         statistics: data.statistics as any,
         sourceName: data.sourceName,
@@ -139,12 +146,23 @@ export class PlayersService {
       throw new NotFoundException('Player not found');
     }
 
-    const records = await this.prisma.playerSeasonStats.findMany({
-      where: {
-        playerId,
-        season,
-      },
-    });
+    const [records, config] = await Promise.all([
+      this.prisma.playerSeasonStats.findMany({
+        where: {
+          playerId,
+          season,
+        },
+      }),
+
+      this.prisma.auctionSeasonConfig.findUnique({
+        where: {
+          leagueId_season: {
+            leagueId: 'IPL',
+            season,
+          },
+        },
+      }),
+    ]);
 
     const iplStats = records.find(
       (record) => record.sourceType === 'IPL',
@@ -154,35 +172,62 @@ export class PlayersService {
       (record) => record.sourceType === 'DOMESTIC_T20',
     );
 
-    let selectedStats = null;
-    let displayStatus = 'N/A';
-
-    // Priority 1: Player has no IPL career.
-    // Use domestic T20 statistics instead.
-    if (iplStats?.iplCareerExists === false) {
-      if (domesticStats?.verified) {
-        selectedStats = domesticStats;
-        displayStatus = 'DOMESTIC_T20';
-      } else if (domesticStats) {
-        selectedStats = domesticStats;
-        displayStatus = 'UNVERIFIED';
+    // Check whether statistics fall within their source-specific cutoff.
+    const isWithinCutoff = (
+      record: (typeof records)[number] | undefined,
+      cutoffDate: Date | undefined,
+    ): boolean => {
+      if (!record?.asOfDate || !cutoffDate) {
+        return false;
       }
-    }
 
-    // Priority 2: Player has an IPL career.
-    // Use IPL statistics only.
-    else if (iplStats?.iplCareerExists === true) {
-      if (iplStats.verified) {
-        selectedStats = iplStats;
+      const recordDate = record.asOfDate.toISOString().slice(0, 10);
+      const cutoff = cutoffDate.toISOString().slice(0, 10);
+
+      return recordDate <= cutoff;
+    };
+
+    const eligibleIplStats = isWithinCutoff(
+      iplStats,
+      config?.iplStatsCutoffDate,
+    )
+      ? iplStats
+      : undefined;
+
+    const eligibleDomesticStats = isWithinCutoff(
+      domesticStats,
+      config?.domesticStatsCutoffDate,
+    )
+      ? domesticStats
+      : undefined;
+
+    let selectedStats = null;
+    let displayStatus: 'AVAILABLE' | 'DOMESTIC_T20' | 'N/A';
+
+    // Case 1: Player has a confirmed IPL career.
+    if (iplStats?.iplCareerExists === true) {
+      if (eligibleIplStats?.verified) {
+        selectedStats = eligibleIplStats;
         displayStatus = 'AVAILABLE';
       } else {
-        selectedStats = iplStats;
-        displayStatus = 'UNVERIFIED';
+        displayStatus = 'N/A';
       }
     }
 
-    // Priority 3: IPL career information is missing.
-    // Do not assume domestic fallback is allowed.
+    // Case 2: Player has no IPL career.
+    else if (iplStats?.iplCareerExists === false) {
+      if (eligibleDomesticStats?.verified) {
+        selectedStats = eligibleDomesticStats;
+        displayStatus = 'DOMESTIC_T20';
+      } else {
+        displayStatus = 'N/A';
+      }
+    }
+
+    // Case 3: IPL career information is missing.
+    else {
+      displayStatus = 'N/A';
+    }
 
     return {
       playerId,

@@ -1,0 +1,70 @@
+<div class="stats-page">
+  <h1>Player Season Statistics</h1>
+
+  <div class="search-box">
+    @if (playersLoading()) {
+      <p>Loading players...</p>
+    } @else {
+      <label for="player">Select Player</label>
+
+      <select
+        id="player"
+        [value]="selectedPlayerId()"
+        (change)="onPlayerChange($any($event.target).value)"
+      >
+        @for (player of players(); track player.id) {
+          <option [value]="player.id">
+            {{ player.name }} — {{ player.role }}
+          </option>
+        }
+      </select>
+    }
+
+    <label for="season">Season</label>
+    <input
+      id="season"
+      [value]="season()"
+      (input)="season.set($any($event.target).value)"
+    />
+
+    <button
+      type="button"
+      (click)="loadStats()"
+      [disabled]="loading() || !selectedPlayerId()"
+    >
+      Load Statistics
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p>Loading statistics...</p>
+  }
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (stats(); as player) {
+    <div class="stats-card">
+      <h2>{{ player.playerName }}</h2>
+      <p>Season: {{ player.season }}</p>
+
+      <div class="status">
+        {{ player.displayStatus }}
+      </div>
+
+      @if (player.displayStatus !== 'N/A' && player.statistics) {
+        <div class="stats-grid">
+          @for (stat of (player.statistics | keyvalue); track stat.key) {
+            <div class="stat-item">
+              <span>{{ stat.key }}</span>
+              <strong>{{ stat.value }}</strong>
+            </div>
+          }
+        </div>
+      } @else {
+        <p>Statistics: N/A</p>
+      }
+    </div>
+  }
+</div>

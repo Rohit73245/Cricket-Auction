@@ -51,25 +51,23 @@ enum PlayerStatsSourceType {
 }
 
 model Auction {
-  id              String            @id @default(uuid()) @db.Uuid
-  name            String
-  mode            AuctionMode
-  status          AuctionStatus     @default(DRAFT)
-  visibility      AuctionVisibility @default(PRIVATE)
+  id             String            @id @default(uuid()) @db.Uuid
+  name           String
+  mode           AuctionMode
+  status         AuctionStatus     @default(DRAFT)
+  visibility     AuctionVisibility @default(PRIVATE)
+  leagueId       String?
+  season         String?
+  selectedTeams  Json?
+  leagueRulesId  String?           @db.Uuid
 
-  leagueId        String?
-  season          String?
-  selectedTeams   Json?
+  leagueRules    LeagueRules?      @relation(fields: [leagueRulesId], references: [id])
+  auctionTeams   AuctionTeam[]
+  auctionPlayers AuctionPlayer[]
+  bids           Bid[]
 
-  leagueRulesId   String?            @db.Uuid
-  leagueRules     LeagueRules?       @relation(fields: [leagueRulesId], references: [id])
-
-  auctionTeams    AuctionTeam[]
-  auctionPlayers  AuctionPlayer[]
-  bids            Bid[]
-
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@index([status, createdAt])
   @@index([leagueRulesId])
@@ -78,83 +76,80 @@ model Auction {
 model LeagueRules {
   id                     String   @id @default(uuid()) @db.Uuid
   leagueId               String   @unique
-
   rulesSourceSeason      String
   currency               String   @default("INR")
   teamPurse              Decimal  @db.Decimal(12, 2)
-
   minimumSquadSize       Int
   maximumSquadSize       Int?
   maximumOverseasPlayers Int?
   maximumOverseasInXI    Int?
-
   minimumLocalPlayers    Int?
   minimumUnder22Players  Int?
-
+  bidIncrements          Json?
   rulesSource            String?
   verified               Boolean  @default(false)
-
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
-
   auctions               Auction[]
 }
 
 model Player {
-  id          String     @id @default(uuid()) @db.Uuid
-  name        String
-  role        PlayerRole
-  nationality String
-  photoUrl    String?
-  basePrice   Decimal    @db.Decimal(12, 2)
-  statistics  Json?
+  id             String              @id @default(uuid()) @db.Uuid
+  name           String
+  role           PlayerRole
+  nationality    String
+  photoUrl       String?
+  basePrice      Decimal             @db.Decimal(12, 2)
+  statistics     Json?
 
   auctionPlayers AuctionPlayer[]
   seasonStats    PlayerSeasonStats[]
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([name])
   @@index([role])
 }
 
 model AuctionTeam {
-  id             String   @id @default(uuid()) @db.Uuid
-  auctionId      String   @db.Uuid
+  id             String          @id @default(uuid()) @db.Uuid
+  auctionId      String          @db.Uuid
   teamCode       String
   teamName       String
-  totalPurse     Decimal  @db.Decimal(12, 2)
-  remainingPurse Decimal  @db.Decimal(12, 2)
+  totalPurse     Decimal         @db.Decimal(12, 2)
+  remainingPurse Decimal         @db.Decimal(12, 2)
 
-  auction        Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  auction        Auction         @relation(fields: [auctionId], references: [id], onDelete: Cascade)
   players        AuctionPlayer[]
   bids           Bid[]
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([auctionId, teamCode])
   @@index([auctionId])
 }
 
 model AuctionPlayer {
-  id          String              @id @default(uuid()) @db.Uuid
-  auctionId   String              @db.Uuid
-  playerId    String              @db.Uuid
-  teamId      String?             @db.Uuid
-  status      PlayerAuctionStatus @default(QUEUED)
-  queueOrder  Int
-  basePrice   Decimal?            @db.Decimal(12, 2)
-  soldPrice   Decimal?            @db.Decimal(12, 2)
+  id               String              @id @default(uuid()) @db.Uuid
+  auctionId        String              @db.Uuid
+  playerId         String              @db.Uuid
+  teamId           String?             @db.Uuid
+  status           PlayerAuctionStatus @default(QUEUED)
+  queueOrder       Int
+  basePrice        Decimal?            @db.Decimal(12, 2)
+  soldPrice        Decimal?            @db.Decimal(12, 2)
+  biddingStartedAt DateTime?
+  biddingEndsAt    DateTime?
 
-  auction     Auction             @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  player      Player              @relation(fields: [playerId], references: [id])
-  team        AuctionTeam?        @relation(fields: [teamId], references: [id])
-  bids        Bid[]
+  auction          Auction             @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  player           Player              @relation(fields: [playerId], references: [id])
+  team             AuctionTeam?        @relation(fields: [teamId], references: [id])
+  bids             Bid[]
 
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
   @@unique([auctionId, playerId])
   @@unique([auctionId, queueOrder])
@@ -179,36 +174,36 @@ model Bid {
   @@index([auctionPlayerId, createdAt])
 }
 
-
 model PlayerSeasonStats {
-  id               String                @id @default(uuid()) @db.Uuid
-  playerId         String                @db.Uuid
-  season           String
-  sourceType       PlayerStatsSourceType
-  asOfDate         DateTime?
-  statistics       Json
-  sourceName       String?
-  sourceUrl        String?
-  verified         Boolean               @default(false)
-  iplCareerExists  Boolean?
+  id              String                @id @default(uuid()) @db.Uuid
+  playerId        String                @db.Uuid
+  season          String
+  sourceType      PlayerStatsSourceType
+  asOfDate        DateTime?
+  statistics      Json
+  sourceName      String?
+  sourceUrl       String?
+  verified        Boolean               @default(false)
+  iplCareerExists Boolean?
 
-  player           Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  player          Player                @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
 
   @@unique([playerId, season, sourceType])
   @@index([season, sourceType])
 }
 
 model AuctionSeasonConfig {
-  id                    String   @id @default(uuid()) @db.Uuid
-  leagueId              String
-  season                String
-  iplStatsCutoffDate    DateTime
+  id                      String   @id @default(uuid()) @db.Uuid
+  leagueId                String
+  season                  String
+  iplStatsCutoffDate      DateTime
   domesticStatsCutoffDate DateTime
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@unique([leagueId, season])
   @@index([season])
