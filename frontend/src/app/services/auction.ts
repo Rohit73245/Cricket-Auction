@@ -34,6 +34,35 @@ export interface Auction {
   updatedAt: string;
 }
 
+export interface AuctionTeam {
+  id: string;
+  teamCode: string;
+  teamName: string;
+  totalPurse: number | string;
+  remainingPurse: number | string;
+}
+
+export interface AuctionPlayer {
+  id: string;
+  status: 'QUEUED' | 'LIVE' | 'SOLD' | 'UNSOLD';
+  queueOrder: number;
+  biddingEndsAt: string | null;
+  soldPrice: number | string | null;
+  player: {
+    id: string;
+    name: string;
+    role: string;
+    nationality: string;
+    basePrice: number | string;
+  };
+  team: AuctionTeam | null;
+  bids?: {
+    id: string;
+    amount: number | string;
+    team: AuctionTeam;
+  }[];
+}
+
 export interface CreateAuctionRequest {
   name: string;
   mode: 'EXISTING_LEAGUE' | 'CUSTOM';
@@ -61,6 +90,14 @@ export class AuctionService {
 
   getAuction(id: string): Observable<Auction> {
     return this.http.get<Auction>(`${this.apiUrl}/${id}`);
+  }
+
+  getAuctionTeams(id: string): Observable<AuctionTeam[]> {
+    return this.http.get<AuctionTeam[]>(`${this.apiUrl}/${id}/teams`);
+  }
+
+  getAuctionPlayers(id: string): Observable<AuctionPlayer[]> {
+    return this.http.get<AuctionPlayer[]>(`${this.apiUrl}/${id}/players`);
   }
 
   createAuction(data: CreateAuctionRequest): Observable<Auction> {

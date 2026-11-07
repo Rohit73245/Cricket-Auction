@@ -119,6 +119,108 @@ h1 {
   color: #c62828;
 }
 
+.live-room {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid #dbe5f2;
+  border-radius: 14px;
+  background: #f8faff;
+}
+
+.live-room-heading,
+.live-player {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.live-room h2 {
+  margin: 8px 0 0;
+}
+
+.connection {
+  color: #8a5a00;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.connection.online {
+  color: #167347;
+}
+
+.room-message,
+.live-player p,
+.current-bid {
+  color: #72819a;
+}
+
+.room-message.error {
+  color: #c62828;
+}
+
+.live-player {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.room-label {
+  color: #2868d7;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.live-player h3 {
+  margin: 6px 0;
+}
+
+.live-player p,
+.current-bid {
+  margin-bottom: 0;
+}
+
+.timer {
+  display: flex;
+  min-width: 76px;
+  flex-direction: column;
+  align-items: center;
+  color: #142642;
+}
+
+.timer span {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.timer small {
+  color: #72819a;
+}
+
+.team-purses {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.team-purse {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #e4ebf5;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.team-purse span {
+  color: #72819a;
+  font-size: 13px;
+}
+
 @media (max-width: 600px) {
   .details-page {
     padding: 24px 16px 40px;
@@ -130,6 +232,10 @@ h1 {
 
   .title-row {
     flex-direction: column;
+  }
+
+  .live-room {
+    padding: 18px;
   }
 
   .details-grid {

@@ -51,6 +51,59 @@
         </article>
       </div>
 
+      <section class="live-room" aria-live="polite">
+        <div class="live-room-heading">
+          <div>
+            <span class="eyebrow">REAL-TIME AUCTION</span>
+            <h2>Live room</h2>
+          </div>
+          <span class="connection" [class.online]="connected()">
+            {{ connected() ? 'Connected' : 'Reconnecting…' }}
+          </span>
+        </div>
+
+        @if (realtimeError()) {
+          <p class="room-message error">{{ realtimeError() }}</p>
+        } @else if (activityMessage()) {
+          <p class="room-message">{{ activityMessage() }}</p>
+        }
+
+        @if (livePlayer(); as currentPlayer) {
+          <div class="live-player">
+            <div>
+              <span class="room-label">NOW BIDDING</span>
+              <h3>{{ currentPlayer.player.name }}</h3>
+              <p>{{ currentPlayer.player.role }} · {{ currentPlayer.player.nationality }}</p>
+            </div>
+            <div class="timer">
+              <span>{{ secondsRemaining() }}</span>
+              <small>seconds</small>
+            </div>
+          </div>
+          @if (currentBid(); as bid) {
+            <p class="current-bid">
+              Current bid: <strong>{{ bid.amount }}</strong>
+              by {{ bid.teamName }}
+            </p>
+          } @else {
+            <p class="current-bid">Waiting for the opening bid.</p>
+          }
+        } @else {
+          <p class="room-message">No player is currently live.</p>
+        }
+
+        @if (teams().length > 0) {
+          <div class="team-purses">
+            @for (team of teams(); track team.id) {
+              <div class="team-purse">
+                <strong>{{ team.teamName }}</strong>
+                <span>Remaining purse: {{ team.remainingPurse }}</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
       <div class="next-step">
   <h2>Next: Set up your auction</h2>
 
