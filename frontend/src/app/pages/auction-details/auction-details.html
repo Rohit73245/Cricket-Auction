@@ -1,134 +1,329 @@
+<main class="auction-page">
 
-<main class="details-page">
   <a class="back-link" routerLink="/">← Back to your auctions</a>
 
   @if (loading()) {
-    <section class="details-card">
-      <p>Loading auction details...</p>
+    <section class="state-card">
+      <div class="loading-spinner"></div>
+      <h2>Loading auction room...</h2>
+      <p>Preparing your live auction experience.</p>
     </section>
   } @else if (error()) {
-    <section class="details-card">
+    <section class="state-card error-state">
+      <span class="eyebrow">AUCTION UNAVAILABLE</span>
       <h1>Unable to open auction</h1>
-      <p class="error">{{ error() }}</p>
+      <p>{{ error() }}</p>
       <a class="back-button" routerLink="/">Return home</a>
     </section>
   } @else if (auction(); as item) {
-    <section class="details-card">
-      <span class="eyebrow">AUCTION WORKSPACE</span>
 
-      <div class="title-row">
-        <div>
-          <h1>{{ item.name }}</h1>
-          <p class="subtitle">Your cricket auction starts here.</p>
+    <header class="auction-header">
+      <div class="auction-heading">
+        <span class="eyebrow">CRICKET AUCTION ROOM</span>
+        <h1>{{ item.name }}</h1>
+        <div class="auction-meta">
+          <span>{{ item.mode === 'CUSTOM' ? 'Custom Auction' : 'Existing League' }}</span>
+          <span class="meta-dot">•</span>
+          <span>{{ item.visibility === 'PRIVATE' ? 'Private Room' : 'Public Room' }}</span>
+          <span class="meta-dot">•</span>
+          <span>{{ item.status }}</span>
+        </div>
+      </div>
+
+      <div class="room-status">
+        <span class="connection-indicator" [class.online]="connected()"></span>
+        <span>{{ connected() ? 'LIVE CONNECTION' : 'RECONNECTING' }}</span>
+      </div>
+    </header>
+
+    @if (realtimeError()) {
+      <div class="notice notice-error">{{ realtimeError() }}</div>
+    } @else if (activityMessage()) {
+      <div class="notice">{{ activityMessage() }}</div>
+    }
+
+    <section class="auction-layout">
+
+      <!-- LEFT: TEAM PURSES -->
+      <aside class="side-panel teams-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">AUCTION OVERVIEW</span>
+            <h2>Teams</h2>
+          </div>
+          <span class="panel-count">{{ teams().length }}</span>
         </div>
 
-        <span class="status">{{ item.status }}</span>
-      </div>
+        @if (teams().length > 0) {
+          <div class="team-list">
+            @for (team of teams(); track team.id) {
+              <article
+                class="team-card"
+                [class.selected]="selectedTeamId() === team.id"
+                (click)="selectTeam(team.id)"
+              >
+                <div class="team-identity">
+                  <div class="team-logo">
+                    {{ team.teamCode || team.teamName.slice(0, 2).toUpperCase() }}
+                  </div>
+                  <div class="team-details">
+                    <strong>{{ team.teamName }}</strong>
+                    <span>{{ team.teamCode || 'Auction team' }}</span>
+                  </div>
+                </div>
 
-      <div class="details-grid">
-        <article class="detail-item">
-          <span>Auction mode</span>
-          <strong>
-            {{ item.mode === 'CUSTOM' ? 'Fully Customised Auction' : 'Select Existing League' }}
-          </strong>
-        </article>
+                <div class="team-purse">
+                  <span>REMAINING PURSE</span>
+                  <strong>{{ formatPurse(team.remainingPurse) }}</strong>
+                </div>
 
-        <article class="detail-item">
-          <span>Visibility</span>
-          <strong>
-            {{ item.visibility === 'PRIVATE' ? 'Private — invite only' : 'Public — open to everyone' }}
-          </strong>
-        </article>
+                @if (selectedTeamId() === team.id) {
+                  <span class="selected-label">SELECTED TEAM</span>
+                }
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="empty-message">No teams available yet.</p>
+        }
+      </aside>
 
-        <article class="detail-item">
-          <span>Created on</span>
-          <strong>{{ item.createdAt | date:'medium' }}</strong>
-        </article>
+      <!-- CENTER: PLAYER AND BIDDING -->
+      <section class="main-panel">
 
-        <article class="detail-item">
-          <span>Auction ID</span>
-          <strong class="auction-id">{{ item.id }}</strong>
-        </article>
-      </div>
-
-      <section class="live-room" aria-live="polite">
-        <div class="live-room-heading">
+        <div class="panel-heading live-heading">
           <div>
             <span class="eyebrow">REAL-TIME AUCTION</span>
-            <h2>Live room</h2>
+            <h2>Player on the block</h2>
           </div>
-          <span class="connection" [class.online]="connected()">
-            {{ connected() ? 'Connected' : 'Reconnecting…' }}
+          <span class="live-tag">
+            <span></span>
+            {{ livePlayer() ? 'LIVE' : 'WAITING' }}
           </span>
         </div>
 
-        @if (realtimeError()) {
-          <p class="room-message error">{{ realtimeError() }}</p>
-        } @else if (activityMessage()) {
-          <p class="room-message">{{ activityMessage() }}</p>
-        }
-
         @if (livePlayer(); as currentPlayer) {
-          <div class="live-player">
-            <div>
-              <span class="room-label">NOW BIDDING</span>
+
+          <article class="player-spotlight">
+
+            <div class="player-visual">
+              @if (playerPhotoUrl()) {
+                <img
+                  [src]="playerPhotoUrl()"
+                  [alt]="currentPlayer.player.name"
+                  class="player-photo"
+                />
+              } @else {
+                <div class="player-placeholder">
+                  {{ playerInitials() }}
+                </div>
+              }
+              <span class="player-visual-label">NOW BIDDING</span>
+            </div>
+
+            <div class="player-information">
+              <span class="eyebrow">PLAYER PROFILE</span>
               <h3>{{ currentPlayer.player.name }}</h3>
-              <p>{{ currentPlayer.player.role }} · {{ currentPlayer.player.nationality }}</p>
+
+              <div class="player-tags">
+                <span>{{ currentPlayer.player.role }}</span>
+                <span>{{ currentPlayer.player.nationality }}</span>
+              </div>
+
+              <div class="base-price-block">
+                <span>BASE PRICE</span>
+                <strong>{{ formatBid(currentPlayer.player.basePrice) }}</strong>
+              </div>
+
+              @if (playerStats().length > 0) {
+                <div class="player-stats">
+                  @for (stat of playerStats(); track stat.label) {
+                    <div class="stat-item">
+                      <span>{{ stat.label }}</span>
+                      <strong>{{ stat.value }}</strong>
+                    </div>
+                  }
+                </div>
+              }
             </div>
-            <div class="timer">
-              <span>{{ secondsRemaining() }}</span>
-              <small>seconds</small>
+
+          </article>
+
+          <section class="bid-display">
+            <div class="current-bid-block">
+              <span class="eyebrow">CURRENT HIGHEST BID</span>
+              @if (currentBid(); as bid) {
+                <strong class="current-bid-amount">{{ formatBid(bid.amount) }}</strong>
+                <span class="highest-bid-team">Leading team: {{ bid.teamName }}</span>
+              } @else {
+                <strong class="current-bid-amount">{{ formatBid(currentPlayer.player.basePrice) }}</strong>
+                <span class="highest-bid-team">Waiting for the opening bid</span>
+              }
             </div>
-          </div>
-          @if (currentBid(); as bid) {
-            <p class="current-bid">
-              Current bid: <strong>{{ bid.amount }}</strong>
-              by {{ bid.teamName }}
-            </p>
-          } @else {
-            <p class="current-bid">Waiting for the opening bid.</p>
+
+            <div class="countdown-block" [class.urgent]="secondsRemaining() <= 5">
+              <span class="eyebrow">TIME LEFT</span>
+              <strong>{{ secondsRemaining() }}</strong>
+              <span>SECONDS</span>
+            </div>
+          </section>
+
+          @if (item.status === 'ACTIVE') {
+            <section class="bidding-panel">
+              <div class="bidding-panel-heading">
+                <div>
+                  <span class="eyebrow">YOUR TURN TO BID</span>
+                  <h3>Place your bid</h3>
+                </div>
+                <span class="one-click-label">ONE-CLICK BIDDING</span>
+              </div>
+
+              <label for="bid-team">Choose your team</label>
+              <select
+                id="bid-team"
+                [value]="selectedTeamId()"
+                (change)="selectTeam($any($event.target).value)"
+              >
+                @for (team of teams(); track team.id) {
+                  <option [value]="team.id">
+                    {{ team.teamName }} — {{ formatPurse(team.remainingPurse) }}
+                  </option>
+                }
+              </select>
+
+              <div class="next-bid-box">
+                <span>NEXT VALID BID</span>
+                <strong>
+                  @if (nextBidAmount() !== null) {
+                    {{ formatBid(nextBidAmount()!) }}
+                  } @else {
+                    Not available
+                  }
+                </strong>
+              </div>
+
+              @if (currentBid()?.teamId === selectedTeamId()) {
+                <p class="bid-warning">
+                  Your selected team placed the previous bid. Another team must bid next.
+                </p>
+              }
+
+              @if (hasInsufficientPurse()) {
+                <p class="bid-warning">
+                  This team does not have enough remaining purse for this bid.
+                </p>
+              }
+
+              @if (bidError()) {
+                <p class="bid-feedback error">{{ bidError() }}</p>
+              }
+
+              @if (bidMessage()) {
+                <p class="bid-feedback success">{{ bidMessage() }}</p>
+              }
+
+              <button
+                type="button"
+                class="place-bid-button"
+                [disabled]="!canPlaceBid()"
+                (click)="placeBid()"
+              >
+                {{ bidSubmitting() ? 'PLACING BID...' : 'PLACE BID' }}
+                <span>→</span>
+              </button>
+
+              @if (!connected()) {
+                <p class="bid-warning">Waiting for the live connection...</p>
+              }
+
+              <p class="bid-help">
+                The next valid bid is calculated automatically. No manual amount entry is required.
+              </p>
+            </section>
           }
+
         } @else {
-          <p class="room-message">No player is currently live.</p>
+          <div class="waiting-player">
+            <div class="waiting-icon">🏏</div>
+            <span class="eyebrow">AUCTION STAGE</span>
+            <h3>No player is currently live</h3>
+            <p>The next player will appear here when bidding starts.</p>
+          </div>
         }
 
-        @if (teams().length > 0) {
-          <div class="team-purses">
-            @for (team of teams(); track team.id) {
-              <div class="team-purse">
-                <strong>{{ team.teamName }}</strong>
-                <span>Remaining purse: {{ team.remainingPurse }}</span>
-              </div>
-            }
-          </div>
-        }
       </section>
 
-      <div class="next-step">
-  <h2>Next: Set up your auction</h2>
+      <!-- RIGHT: BID HISTORY -->
+      <aside class="side-panel history-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="eyebrow">LIVE ACTIVITY</span>
+            <h2>Recent bids</h2>
+          </div>
+          <span class="panel-count">{{ bidHistory().length }}</span>
+        </div>
 
-  @if (item.mode === 'EXISTING_LEAGUE') {
-    <p>
-      Select your league, season and participating teams before proceeding
-      to team setup.
-    </p>
+        @if (bidHistory().length > 0) {
+          <div class="bid-history-list">
+            @for (bid of bidHistory().slice(0, 8); track bid.id; let i = $index) {
+              <article class="history-item">
+                <div class="history-number">{{ i + 1 }}</div>
+                <div class="history-details">
+                  <strong>{{ bid.team.teamName }}</strong>
+                  <span>{{ i === 0 ? 'Latest bid' : 'Bid placed' }}</span>
+                </div>
+                <strong class="history-amount">{{ formatBid(bid.amount) }}</strong>
+              </article>
+            }
+          </div>
+        } @else {
+          <div class="empty-history">
+            <div class="empty-history-icon">↗</div>
+            <h3>No bids yet</h3>
+            <p>Valid bids will appear here as the auction progresses.</p>
+          </div>
+        }
 
-    <a
-      class="setup-button"
-      [routerLink]="['/auctions', item.id, 'league']"
-    >
-      Select Participating Teams →
-    </a>
-  } @else {
-    <p>
-      Configure your custom auction teams, budgets and player pool.
-    </p>
+        <div class="history-footer">
+          <span class="history-live-dot"></span>
+          Updates automatically during the auction
+        </div>
+      </aside>
 
-    <button type="button" disabled>
-      Custom setup — coming next
-    </button>
-  }
-</div>
     </section>
+
+    @if (item.status === 'DRAFT') {
+      <section class="setup-section">
+        <div>
+          <span class="eyebrow">NEXT STEP</span>
+          <h2>Set up your auction</h2>
+          @if (item.mode === 'EXISTING_LEAGUE') {
+            <p>Select your league, season and participating teams before proceeding to team setup.</p>
+          } @else {
+            <p>Configure your custom auction teams, budgets and player pool.</p>
+          }
+        </div>
+
+        @if (item.mode === 'EXISTING_LEAGUE') {
+          <a
+            class="setup-button"
+            [routerLink]="['/auctions', item.id, 'league']"
+          >
+            Select Participating Teams →
+          </a>
+        } @else {
+          <button type="button" class="setup-button" disabled>
+            Custom setup — coming next
+          </button>
+        }
+      </section>
+    }
+
+    <footer class="auction-footer">
+      <span>{{ item.name }}</span>
+      <span>Auction ID: {{ item.id }}</span>
+    </footer>
+
   }
+
 </main>

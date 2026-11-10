@@ -17,6 +17,16 @@ export interface LeagueRules {
   minimumUnder22Players: number | null;
   rulesSource: string | null;
   verified: boolean;
+  bidIncrements?: {
+    tiers?: {
+      upTo: number;
+      increment: number;
+    }[];
+    aboveLastTier?: {
+      mode: string;
+      minimumIncrement: number;
+    };
+  } | null;
 }
 
 export interface Auction {
@@ -82,7 +92,9 @@ export interface LeagueSelectionRequest {
 })
 export class AuctionService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:3000/api/v1/auctions';
+
+  private readonly apiUrl =
+    'http://localhost:3000/api/v1/auctions';
 
   getAuctions(): Observable<Auction[]> {
     return this.http.get<Auction[]>(this.apiUrl);
@@ -118,6 +130,16 @@ export class AuctionService {
     return this.http.post<Auction>(
       `${this.apiUrl}/${id}/start`,
       {}
+    );
+  }
+
+  placeBid(
+    id: string,
+    data: { teamId: string; amount: number }
+  ): Observable<unknown> {
+    return this.http.post(
+      `${this.apiUrl}/${id}/bids`,
+      data
     );
   }
 }
