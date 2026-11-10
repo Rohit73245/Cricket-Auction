@@ -737,11 +737,9 @@ export class AuctionsService {
         auctionId: id,
 
         playerId,
-
         queueOrder: nextQueueOrder,
-
         status: 'QUEUED',
-
+        basePrice: player.basePrice,
       },
 
       include: {
@@ -841,7 +839,7 @@ export class AuctionsService {
 
       const now = new Date();
 
-      const biddingEndsAt = new Date(now.getTime() + 15_000);
+      const biddingEndsAt = new Date(now.getTime() + 30_000);
 
       const updated = await tx.auctionPlayer.updateMany({
 
@@ -949,7 +947,7 @@ async restartBiddingTimer(auctionId: string) {
 
     const now = new Date();
 
-    const biddingEndsAt = new Date(now.getTime() + 15_000);
+    const biddingEndsAt = new Date(now.getTime() + 30_000);
 
     return tx.auctionPlayer.update({
 
@@ -1307,7 +1305,7 @@ async placeBid(
 
     const now = new Date();
 
-    const biddingEndsAt = new Date(now.getTime() + 15_000);
+    const biddingEndsAt = new Date(now.getTime() + 30_000);
 
     // Save the valid bid.
 
@@ -2116,7 +2114,7 @@ async markPlayerUnsold(auctionId: string) {
           }
 
           const nextStartTime = new Date();
-          const nextEndTime = new Date(nextStartTime.getTime() + 15_000);
+          const nextEndTime = new Date(nextStartTime.getTime() + 30_000);
           const nextPlayerUpdate = await tx.auctionPlayer.updateMany({
             where: {
               id: nextPlayer.id,
